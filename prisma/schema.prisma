@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1. Tabel 8 Akun Karyawan Sintel
+model User {
+  id        String   @id @default(uuid())
+  nipp      String   @unique
+  nama      String
+  password  String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  
+  mutasi    Mutasi[]
+}
+
+// 2. Tabel Inventory Barang (Sesuai Flowchart Klaten)
+model Barang {
+  id           String   @id @default(uuid())
+  idBarang     String   @unique // Contoh: STLKT/6.5/HP/001
+  nama         String
+  kategori     String   // Barang Habis Pakai, Spare Part, Alat Kerja
+  lokasi       String   // KABINET 1 / RAK 3
+  jumlahAwal   Int
+  satuan       String   // KALENG, BATANG, UNIT
+  jumlahAkhir  Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mutasi       Mutasi[]
+}
+
+// 3. Tabel Catatan Mutasi / Penggunaan Barang
+model Mutasi {
+  id          String   @id @default(uuid())
+  barangId    String
+  userId      String
+  tipe        String   // MASUK / KELUAR
+  jumlah      Int
+  tanggal     String
+  keterangan  String?
+  createdAt   DateTime @default(now())
+
+  barang      Barang   @relation(fields: [barangId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
