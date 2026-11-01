@@ -58,21 +58,19 @@ export async function addBarang(formData: {
 }
 
 // 3. Catat Penggunaan Barang (Ngurangin Stok + Log Mutasi)
+// 5. Catat Penggunaan (Pakai) Barang + Keterangan
 export async function recordUsage(data: {
-  id: string; // ID unik database
+  id: string;
   jumlahPakai: number;
   tanggal: string;
+  keterangan?: string; // <-- Ini obat dari error merah lu
   userId?: string;
 }) {
   try {
     const barang = await prisma.barang.findUnique({ where: { id: data.id } });
     if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
+    if (barang.jumlahAkhir < data.jumlahPakai) return { success: false, error: 'Stok tidak cukup!' };
 
-    if (data.jumlahPakai > barang.jumlahAkhir) {
-      return { success: false, error: 'Penggunaan melebihi sisa stok akhir!' };
-    }
-
-    // Ambil user default (misal Roni S) kalau userId belum dilempar dari login
     let user = await prisma.user.findFirst();
     const activeUserId = data.userId || user?.id;
 
@@ -82,7 +80,6 @@ export async function recordUsage(data: {
 
     const newAkhir = barang.jumlahAkhir - Number(data.jumlahPakai);
 
-    // Update stok barang & insert riwayat mutasi sekaligus (Transaction)
     await prisma.$transaction([
       prisma.barang.update({
         where: { id: data.id },
@@ -95,18 +92,16 @@ export async function recordUsage(data: {
           tipe: 'KELUAR',
           jumlah: Number(data.jumlahPakai),
           tanggal: data.tanggal,
-          keterangan: 'Penggunaan operasional Sintel',
+          // Sekarang dia bakal nyatet keterangan, kalau kosong defaultnya "Dipakai"
+          keterangan: data.keterangan || 'Barang dipakai / diambil', 
         },
       }),
     ]);
 
-    revalidatePath('/admin/inventory');
-    revalidatePath('/admin');
-    revalidatePath('/admin/laporan');
     return { success: true };
   } catch (error) {
     console.error('Error record usage:', error);
-    return { success: false, error: 'Gagal mencatat penggunaan barang!' };
+    return { success: false, error: 'Gagal mencatat penggunaan!' };
   }
 }
 
