@@ -46,7 +46,7 @@ export default function AdminDashboard() {
           href="/admin/inventory" 
           className="bg-[#F36F21] hover:bg-[#d85e18] text-white px-5 py-2.5 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 text-sm"
         >
-          <span>📦</span> Kelola Semua Data
+          <span></span> Kelola Semua Data
         </Link>
       </div>
 

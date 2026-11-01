@@ -239,3 +239,64 @@ export async function getLaporanMutasi() {
     return { success: false, error: 'Gagal menarik data laporan!' };
   }
 }
+
+// 8. Fitur PINJAM Alat Kerja
+export async function pinjamAlat(data: { id: string; jumlah: number; tanggal: string; keterangan: string; userId?: string }) {
+  try {
+    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
+    if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
+    if (barang.jumlahAkhir < data.jumlah) return { success: false, error: 'Stok alat tidak cukup untuk dipinjam!' };
+
+    let user = await prisma.user.findFirst();
+    const activeUserId = data.userId || user?.id;
+
+    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
+
+    const newAkhir = barang.jumlahAkhir - Number(data.jumlah); // Stok berkurang sementara
+
+    await prisma.$transaction([
+      prisma.barang.update({ where: { id: data.id }, data: { jumlahAkhir: newAkhir } }),
+      prisma.mutasi.create({
+        data: {
+          barangId: barang.id, userId: activeUserId, tipe: 'PINJAM', // Tipe khusus pinjam
+          jumlah: Number(data.jumlah), tanggal: data.tanggal, keterangan: data.keterangan,
+        },
+      }),
+    ]);
+
+    revalidatePath('/admin/inventory'); revalidatePath('/admin'); revalidatePath('/admin/laporan');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Gagal mencatat peminjaman!' };
+  }
+}
+
+// 9. Fitur KEMBALIKAN Alat Kerja
+export async function kembalikanAlat(data: { id: string; jumlah: number; tanggal: string; keterangan: string; userId?: string }) {
+  try {
+    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
+    if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
+
+    let user = await prisma.user.findFirst();
+    const activeUserId = data.userId || user?.id;
+
+    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
+
+    const newAkhir = barang.jumlahAkhir + Number(data.jumlah); // Stok balik lagi
+
+    await prisma.$transaction([
+      prisma.barang.update({ where: { id: data.id }, data: { jumlahAkhir: newAkhir } }),
+      prisma.mutasi.create({
+        data: {
+          barangId: barang.id, userId: activeUserId, tipe: 'KEMBALI', // Tipe khusus kembali
+          jumlah: Number(data.jumlah), tanggal: data.tanggal, keterangan: data.keterangan,
+        },
+      }),
+    ]);
+
+    revalidatePath('/admin/inventory'); revalidatePath('/admin'); revalidatePath('/admin/laporan');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Gagal mencatat pengembalian!' };
+  }
+}

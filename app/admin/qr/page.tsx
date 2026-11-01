@@ -39,7 +39,7 @@ export default function MasterQrPage() {
           onClick={() => window.print()}
           className="print:hidden w-full bg-[#F36F21] hover:bg-[#d85e18] text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition-colors shadow-md"
         >
-          🖨️ Cetak QR Code (Print)
+           Cetak QR Code 
         </button>
         <p className="print:hidden text-xs text-slate-400 mt-4 text-center">
           Scan dengan kamera HP untuk langsung membuka sistem inventori dari perangkat manapun.

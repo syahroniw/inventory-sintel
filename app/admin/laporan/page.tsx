@@ -89,7 +89,7 @@ export default function LaporanPage() {
           disabled={loading || logs.length === 0}
           className="bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm transition-colors flex items-center gap-2 text-sm"
         >
-          📄 Export Laporan (.PDF)
+           Export Laporan PDF
         </button>
       </div>
 
