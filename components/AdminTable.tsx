@@ -19,6 +19,7 @@ export default function AdminTable() {
   // Forms
   const [qty, setQty] = useState(1);
   const [dateStr, setDateStr] = useState('');
+  const [waktu, setWaktu] = useState(''); // <-- TAMBAHIN INI
   const [keterangan, setKeterangan] = useState('');
 
   const [newItem, setNewItem] = useState({
@@ -49,6 +50,7 @@ export default function AdminTable() {
 
   // Action Reset Form
   const resetForm = () => {
+    setQty(1); setDateStr(''); setKeterangan(''); setWaktu(''); // <-- Tambahin setWaktu('') di sini
     setQty(1); setDateStr(''); setKeterangan('');
     setUsageItem(null); setRestockItem(null); setBorrowItem(null); setReturnItem(null);
   };
@@ -158,6 +160,8 @@ export default function AdminTable() {
         </table>
       </div>
 
+
+
       {/* Dynamic Modal Universal Buat Pakai / Restock / Pinjam / Kembali */}
       {(usageItem || restockItem || borrowItem || returnItem) && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -178,9 +182,25 @@ export default function AdminTable() {
                 <label className="block text-xs font-bold mb-1">Tanggal</label>
                 <input type="date" required value={dateStr} onChange={(e) => setDateStr(e.target.value)} className="w-full border p-2 rounded-xl text-sm" />
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold mb-1">Tanggal</label>
+                  <input type="date" required value={dateStr} onChange={(e) => setDateStr(e.target.value)} className="w-full border p-2 rounded-xl text-sm" />
+                </div>
+                
+                {/* Kolom Jam khusus buat Pinjam / Kembali */}
+                {(borrowItem || returnItem) && (
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Jam (Waktu)</label>
+                    <input type="time" required value={waktu} onChange={(e) => setWaktu(e.target.value)} className="w-full border p-2 rounded-xl text-sm focus:ring-2 focus:ring-purple-500" />
+                  </div>
+                )}
+              </div>
 
               {/* Input Wajib Keterangan Buat Pinjam / Kembali / Pakai */}
               {(borrowItem || returnItem || usageItem) && (
+
+             
                 <div>
                   <label className="block text-xs font-bold mb-1">
                     {borrowItem ? 'Nama Peminjam / Keperluan (Wajib)' : returnItem ? 'Dikembalikan oleh (Wajib)' : 'Keterangan'}
