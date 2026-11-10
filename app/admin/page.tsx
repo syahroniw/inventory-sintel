@@ -20,12 +20,14 @@ export default function AdminDashboard() {
     loadStats();
   }, []);
 
+  // Shortcut ringkas (QR & Mutasi udah dibuang!)
   const tiles = [
     {
       title: 'Alat Kerja',
       subtitle: 'Pinjam & kembalikan obeng, tang, multitester, dll.',
       badge: stats?.categories?.ak ? `${stats.categories.ak} Item` : 'Buka Menu',
-      href: '/admin/inventory',
+      // Mengarahkan langsung ke tab Alat Kerja
+      href: '/admin/inventory?tab=Alat Kerja',
       bgColor: 'bg-emerald-500',
       hoverColor: 'hover:bg-emerald-600',
       icon: (
@@ -39,7 +41,8 @@ export default function AdminDashboard() {
       title: 'Barang Habis Pakai',
       subtitle: 'Ambil isolasi, kabel, cat, & material sekali pakai.',
       badge: stats?.categories?.hp ? `${stats.categories.hp} Item` : 'Buka Menu',
-      href: '/admin/inventory',
+      // Mengarahkan langsung ke tab Barang Habis Pakai
+      href: '/admin/inventory?tab=Barang Habis Pakai',
       bgColor: 'bg-blue-600',
       hoverColor: 'hover:bg-blue-700',
       icon: (
@@ -52,7 +55,8 @@ export default function AdminDashboard() {
       title: 'Spare Part / Suku Cadang',
       subtitle: 'Stok komponen pengganti & cadangan sistem.',
       badge: stats?.categories?.sp ? `${stats.categories.sp} Item` : 'Buka Menu',
-      href: '/admin/inventory',
+      // Mengarahkan langsung ke tab Spare Part
+      href: '/admin/inventory?tab=Spare Part / Suku Cadang',
       bgColor: 'bg-[#F36F21]',
       hoverColor: 'hover:bg-[#d85e18]',
       icon: (
@@ -62,38 +66,12 @@ export default function AdminDashboard() {
       )
     },
     {
-      title: 'Laporan & Mutasi',
-      subtitle: 'Cetak dokumen PDF & cek riwayat transaksi.',
-      badge: 'Cetak PDF',
-      href: '/admin/laporan',
-      bgColor: 'bg-[#2D2A70]',
-      hoverColor: 'hover:bg-[#201d52]',
-      icon: (
-        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      )
-    },
-    {
-      title: 'Master QR Code',
-      subtitle: 'Halaman cetak QR Code portal pintu gudang.',
-      badge: 'Siap Cetak',
-      href: '/admin/qr',
-      bgColor: 'bg-purple-600',
-      hoverColor: 'hover:bg-purple-700',
-      icon: (
-        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-        </svg>
-      )
-    },
-    {
       title: 'Manajemen Akun',
       subtitle: 'Tambah & kelola akun admin/karyawan.',
       badge: stats?.userCount ? `${stats.userCount} User` : 'Kelola',
       href: '/admin/users',
-      bgColor: 'bg-rose-600',
-      hoverColor: 'hover:bg-rose-700',
+      bgColor: 'bg-purple-600',
+      hoverColor: 'hover:bg-purple-700',
       icon: (
         <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -117,15 +95,15 @@ export default function AdminDashboard() {
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-[#2D2A70] tracking-tight">Sistem Inventori Gudang</h1>
-          <p className="text-slate-500 font-medium text-sm mt-1">Pilih menu di bawah untuk mulai mengelola data UPT STL 6.5 Klaten.</p>
+          <p className="text-slate-500 font-medium text-sm mt-1">Pilih kategori menu di bawah untuk mengelola data UPT STL 6.5 Klaten.</p>
         </div>
         <div className="bg-slate-100 px-4 py-2 rounded-2xl text-xs font-bold text-slate-600 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-          Sistem Online & Terhubung
+          Sistem Online
         </div>
       </div>
 
-      {/* Peringatan Stok Kritis (Muncul Cuma Kalau Ada Barang Sekarat) */}
+      {/* Peringatan Stok Kritis */}
       {stats?.criticalCount > 0 && (
         <Link 
           href="/admin/inventory"
@@ -140,7 +118,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <h3 className="text-lg font-black tracking-wide">PERINGATAN STOK KRITIS!</h3>
-                <p className="text-xs md:text-sm font-medium text-red-100">Ada {stats.criticalCount} barang stoknya ≤ 3. Klik kartu ini untuk langsung restock!</p>
+                <p className="text-xs md:text-sm font-medium text-red-100">Ada {stats.criticalCount} barang stoknya ≤ 3. Klik untuk periksa!</p>
               </div>
             </div>
             <span className="hidden md:inline-block bg-white text-red-600 font-black px-4 py-2 rounded-2xl text-xs shadow-sm">
@@ -150,15 +128,14 @@ export default function AdminDashboard() {
         </Link>
       )}
 
-      {/* Grid Menu Tombol Raksasa (Interactive Tile Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Grid 4 Shortcut Utama */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {tiles.map((tile, index) => (
           <Link
             key={index}
             href={tile.href}
-            className={`group relative ${tile.bgColor} ${tile.hoverColor} p-6 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between min-h-[200px] overflow-hidden transform hover:-translate-y-1.5`}
+            className={`group relative ${tile.bgColor} ${tile.hoverColor} p-6 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between min-h-[190px] overflow-hidden transform hover:-translate-y-1.5`}
           >
-            {/* Lingkaran Hiasan Background */}
             <div className="absolute -bottom-8 -right-8 w-36 h-36 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform pointer-events-none" />
 
             <div className="flex justify-between items-start">
@@ -170,8 +147,8 @@ export default function AdminDashboard() {
               </span>
             </div>
 
-            <div className="mt-6">
-              <h2 className="text-2xl font-black text-white tracking-wide flex items-center gap-2">
+            <div className="mt-4">
+              <h2 className="text-2xl font-black text-white tracking-wide">
                 {tile.title}
               </h2>
               <p className="text-white/80 text-xs font-medium mt-1 leading-relaxed">
@@ -180,7 +157,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-white text-xs font-bold">
-              <span>Klik untuk buka</span>
+              <span>Buka Menu</span>
               <span className="transform group-hover:translate-x-2 transition-transform">➔</span>
             </div>
           </Link>
