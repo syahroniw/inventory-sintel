@@ -72,3 +72,16 @@ export async function tambahKaryawan(data: { nama: string; nipp: string; passwor
     return { success: false, error: 'Gagal menambahkan karyawan baru!' };
   }
 }
+
+// Hapus akun karyawan / admin
+export async function hapusKaryawan(id: string) {
+  try {
+    await prisma.user.delete({
+      where: { id: id }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error delete user:', error);
+    return { success: false, error: 'Gagal menghapus akun karyawan!' };
+  }
+}

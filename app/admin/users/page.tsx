@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getSemuaKaryawan, tambahKaryawan } from '@/app/actions/auth'; 
+import { getSemuaKaryawan, tambahKaryawan, hapusKaryawan } from '@/app/actions/auth'; 
 
 export default function ManajemenUserPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -31,6 +31,18 @@ export default function ManajemenUserPage() {
     }
   };
 
+  const handleDelete = async (id: string, nama: string) => {
+    if (window.confirm(`Yakin mau ngapus akses login untuk ${nama}?`)) {
+      const res = await hapusKaryawan(id);
+      if (res.success) {
+        alert('Berhasil menghapus akun!');
+        fetchUsers();
+      } else {
+        alert(res.error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
@@ -48,7 +60,7 @@ export default function ManajemenUserPage() {
               <input type="text" required value={form.nama} onChange={(e) => setForm({...form, nama: e.target.value})} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#2D2A70]" placeholder="Misal: Syahroni Wijayanto" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">NIPP</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">NIPP / ID</label>
               <input type="text" required value={form.nipp} onChange={(e) => setForm({...form, nipp: e.target.value})} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#2D2A70]" placeholder="Misal: 87654" />
             </div>
             <div>
@@ -61,7 +73,7 @@ export default function ManajemenUserPage() {
           </form>
         </div>
 
-        {/* Tabel Karyawan Aktif */}
+        {/* Tabel Karyawan Aktif + Tombol Hapus */}
         <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
@@ -69,11 +81,14 @@ export default function ManajemenUserPage() {
                 <th className="px-6 py-4">Nama Pegawai</th>
                 <th className="px-6 py-4">NIPP</th>
                 <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={3} className="px-6 py-8 text-center text-slate-400">Memuat data...</td></tr>
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-400">Memuat data...</td></tr>
+              ) : users.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-400">Belum ada data karyawan.</td></tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50">
@@ -81,6 +96,14 @@ export default function ManajemenUserPage() {
                     <td className="px-6 py-4 font-mono text-blue-600 font-bold text-xs">{u.nipp}</td>
                     <td className="px-6 py-4 text-center">
                       <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase">Aktif</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button 
+                        onClick={() => handleDelete(u.id, u.nama)}
+                        className="bg-red-100 hover:bg-red-600 hover:text-white text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors shadow-sm"
+                      >
+                        Hapus
+                      </button>
                     </td>
                   </tr>
                 ))
