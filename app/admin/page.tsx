@@ -83,7 +83,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-slate-400 font-bold animate-pulse">Menyiapkan Dashboard Utama... 🔄</p>
+        <p className="text-slate-400 font-bold animate-pulse">Menyiapkan Dashboard Utama... </p>
       </div>
     );
   }

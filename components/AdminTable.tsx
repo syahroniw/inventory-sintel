@@ -21,6 +21,9 @@ export default function AdminTable() {
   const [borrowItem, setBorrowItem] = useState<any>(null);
   const [returnItem, setReturnItem] = useState<any>(null);
 
+  // State Modal Konfirmasi Hapus Estetik
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nama: string } | null>(null);
+
   // Forms
   const [qty, setQty] = useState(1);
   const [dateStr, setDateStr] = useState('');
@@ -101,10 +104,16 @@ export default function AdminTable() {
     }
   };
 
-  const handleHapus = async (id: string, nama: string) => {
-    if (window.confirm(`Yakin mau ngapus barang: ${nama}?`)) {
-      const res = await deleteBarang(id);
-      if (res.success) { showToast(`Dihapus!`, 'danger'); fetchData(); }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const res = await deleteBarang(deleteTarget.id);
+    if (res.success) { 
+      showToast(`Barang ${deleteTarget.nama} berhasil dihapus!`, 'danger'); 
+      setDeleteTarget(null);
+      fetchData(); 
+    } else {
+      showToast('Gagal menghapus barang!', 'danger');
+      setDeleteTarget(null);
     }
   };
 
@@ -112,9 +121,11 @@ export default function AdminTable() {
 
   return (
     <div className="space-y-6 relative">
+      {/* Toast Notifikasi Melayang */}
       {toast?.show && (
-        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-2xl text-white font-bold animate-bounce ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-          {toast.msg}
+        <div className={`fixed top-5 right-5 z-50 px-5 py-3.5 rounded-2xl shadow-2xl text-white font-bold flex items-center gap-3 animate-bounce ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+          <span>{toast.type === 'success' ? '✓' : '⚠'}</span>
+          <span className="text-sm">{toast.msg}</span>
         </div>
       )}
 
@@ -129,7 +140,7 @@ export default function AdminTable() {
           className="w-full sm:max-w-xs px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#2D2A70] focus:outline-none" 
         />
 
-        {/* Filter Dropdown Lipat (Default Nampilin Kategori Aktif) */}
+        {/* Filter Dropdown Lipat */}
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -144,7 +155,6 @@ export default function AdminTable() {
             </svg>
           </button>
 
-          {/* Opsi Menu saat Diklik */}
           {isDropdownOpen && (
             <div className="absolute left-0 right-0 sm:left-auto sm:right-0 mt-2 w-full sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-150">
               {categories.map((cat) => (
@@ -212,7 +222,7 @@ export default function AdminTable() {
                         <button onClick={() => setUsageItem(item)} className="bg-orange-100 text-orange-800 hover:bg-orange-600 hover:text-white px-2.5 py-1 rounded-lg text-xs font-bold transition-colors">Pakai</button>
                       )}
                       
-                      <button onClick={() => handleHapus(item.id, item.nama)} className="bg-red-100 text-red-700 hover:bg-red-600 hover:text-white px-2.5 py-1 rounded-lg text-xs font-bold transition-colors">Hapus</button>
+                      <button onClick={() => setDeleteTarget({ id: item.id, nama: item.nama })} className="bg-red-100 text-red-700 hover:bg-red-600 hover:text-white px-2.5 py-1 rounded-lg text-xs font-bold transition-colors">Hapus</button>
                     </div>
                   </td>
                 </tr>
@@ -222,7 +232,7 @@ export default function AdminTable() {
         </table>
       </div>
 
-      {/* Modal Universal */}
+      {/* Modal Universal Action (Pinjam/Kembali/Pakai/Restock) */}
       {(usageItem || restockItem || borrowItem || returnItem) && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
@@ -297,6 +307,38 @@ export default function AdminTable() {
           </div>
         </div>
       )}
+
+      {/* Custom Modal Konfirmasi Hapus Data Inventory */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-inner">
+              !
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">Hapus Data Barang?</h3>
+              <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">
+                Tindakan ini akan menghapus permanen barang <span className="font-bold text-slate-800">{deleteTarget.nama}</span> dari sistem inventori.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button 
+                onClick={() => setDeleteTarget(null)}
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl text-xs transition-colors shadow-md"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
