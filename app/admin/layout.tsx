@@ -9,11 +9,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [profile, setProfile] = useState({ nama: 'Admin Gudang', nipp: '87654', initials: 'AK' });
 
   // Otomatis tutup sidebar di HP kalau lu pindah halaman
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
+
+  // Tarik data profil dari localStorage hasil login
+  useEffect(() => {
+    const savedName = localStorage.getItem('user_nama');
+    const savedNipp = localStorage.getItem('user_nipp');
+    
+    if (savedName && savedNipp) {
+      const inisial = savedName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+      setProfile({ nama: savedName, nipp: savedNipp, initials: inisial });
+    }
+  }, []);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -57,12 +69,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </svg>
       ) 
     },
+    { 
+      name: 'Manajemen Akun', 
+      path: '/admin/users', 
+      icon: (
+        <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) 
+    },
   ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex relative">
       
-      {/* Layar Gelap (Overlay) buat nutupin background pas menu HP kebuka */}
+      {/* Layar Gelap (Overlay) buat HP */}
       {isMobileOpen && (
         <div 
           className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
@@ -70,7 +91,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* Sidebar Responsive (Ngumpet di kiri kalau di HP, muncul kalau di Laptop) */}
+      {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 flex flex-col bg-[#2D2A70] text-white shadow-2xl transition-all duration-300 ease-in-out
         ${isMobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'}
@@ -84,7 +105,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           )}
           
-          {/* Tombol Togle Laptop (Disembunyikan di HP) */}
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={`hidden md:block p-2 rounded-lg bg-white/10 hover:bg-[#F36F21] text-white transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
@@ -98,7 +118,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </svg>
           </button>
 
-          {/* Tombol Silang (Close) Khusus HP */}
           <button 
             onClick={() => setIsMobileOpen(false)}
             className="md:hidden p-2 rounded-lg bg-white/10 hover:bg-red-500 text-white transition-colors"
@@ -148,7 +167,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Header Atas */}
         <header className="h-20 bg-white border-b-2 border-[#F36F21] flex items-center justify-between md:justify-end px-4 md:px-8 shadow-sm z-10 print:hidden shrink-0">
           
-          {/* Tombol Hamburger Khusus HP */}
           <button 
             onClick={() => setIsMobileOpen(true)}
             className="md:hidden p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#2D2A70] transition-colors"
@@ -161,19 +179,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Profil User */}
           <div className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors">
             <div className="text-right hidden md:block">
-              <p className="text-sm font-bold text-[#2D2A70]">Admin Gudang</p>
-              <p className="text-xs text-slate-500 font-medium">UPT STL 6.5 Klaten</p>
+              <p className="text-sm font-bold text-[#2D2A70]">{profile.nama}</p>
+              <p className="text-xs text-slate-500 font-medium">Role: {profile.nipp}</p>
             </div>
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#2D2A70] flex items-center justify-center text-white font-black text-sm md:text-lg shadow-sm">
-              AK
+              {profile.initials}
             </div>
           </div>
         </header>
 
-        {/* Isi Konten (Dashboard/Tabel) */}
+        {/* Isi Konten */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible bg-slate-50 w-full relative">
           {children}
         </div>
+
       </main>
 
     </div>

@@ -39,3 +39,36 @@ export async function logoutUser() {
   cookieStore.delete('user_session');
   return { success: true };
 }
+// Ambil semua data karyawan untuk halaman Manajemen Akun
+export async function getSemuaKaryawan() {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, nama: true, nipp: true, createdAt: true } // Jangan tarik passwordnya wkwk
+    });
+    return { success: true, data: users };
+  } catch (error) {
+    console.error('Error fetch users:', error);
+    return { success: false, error: 'Gagal menarik data karyawan!' };
+  }
+}
+
+// Tambah karyawan / admin baru
+export async function tambahKaryawan(data: { nama: string; nipp: string; password: string }) {
+  try {
+    const existing = await prisma.user.findUnique({ where: { nipp: data.nipp } });
+    if (existing) return { success: false, error: 'NIPP sudah terdaftar di sistem!' };
+
+    await prisma.user.create({
+      data: {
+        nama: data.nama,
+        nipp: data.nipp,
+        password: data.password, // Catatan: Di dunia nyata ini wajib di-bcrypt (hash) ya Ron!
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error tambah user:', error);
+    return { success: false, error: 'Gagal menambahkan karyawan baru!' };
+  }
+}

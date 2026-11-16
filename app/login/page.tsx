@@ -18,6 +18,17 @@ export default function LoginPage() {
 
     const res = await loginUser(nipp, password);
     if (res.success) {
+      if (res.success) {
+        if (res.user) { // Biar aman kalau res.user ternyata kosong
+          localStorage.setItem('user_nama', res.user.nama || 'Admin Gudang');
+          localStorage.setItem('user_nipp', res.user.role || '87654');
+        } else {
+          localStorage.setItem('user_nama', 'Admin Gudang');
+          localStorage.setItem('user_nipp', '87654');
+        }
+        
+        router.push('/admin');
+      }
       router.push('/admin');
     } else {
       setError(res.error || 'Login gagal!');
