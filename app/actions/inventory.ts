@@ -3,27 +3,21 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
-// 1. Ambil Semua Data Barang dari Supabase
+// 1. Ambil Semua Data Inventory
 export async function getInventory() {
   try {
-    const items = await prisma.barang.findMany({
+    const data = await prisma.barang.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        mutasi: {
-          take: 1,
-          orderBy: { createdAt: 'desc' },
-        },
-      },
     });
-    return { success: true, data: items };
+    return { success: true, data };
   } catch (error) {
-    console.error('Error fetch inventory:', error);
-    return { success: false, error: 'Gagal narik data dari Supabase' };
+    console.error('Error get inventory:', error);
+    return { success: false, error: 'Gagal memuat inventori' };
   }
 }
 
-// 2. Tambah Barang Baru ke Supabase
-export async function addBarang(formData: {
+// 2. Tambah Barang Baru (Otomatis Catat Mutasi Masuk Awal)
+export async function addBarang(data: {
   nama: string;
   idBarang: string;
   kategori: string;
@@ -32,162 +26,56 @@ export async function addBarang(formData: {
   satuan: string;
 }) {
   try {
-    const newItem = await prisma.barang.create({
+    const existing = await prisma.barang.findUnique({ where: { idBarang: data.idBarang } });
+    if (existing) {
+      return { success: false, error: 'ID Barang sudah terdaftar!' };
+    }
+
+    let user = await prisma.user.findFirst();
+
+    const barang = await prisma.barang.create({
       data: {
-        nama: formData.nama,
-        idBarang: formData.idBarang,
-        kategori: formData.kategori,
-        lokasi: formData.lokasi,
-        jumlahAwal: Number(formData.jumlahAwal),
-        satuan: formData.satuan,
-        jumlahAkhir: Number(formData.jumlahAwal),
+        nama: data.nama,
+        idBarang: data.idBarang,
+        kategori: data.kategori,
+        lokasi: data.lokasi,
+        jumlahAwal: data.jumlahAwal,
+        jumlahAkhir: data.jumlahAwal,
+        satuan: data.satuan.toUpperCase(),
       },
     });
 
-    revalidatePath('/admin/inventory');
-    revalidatePath('/admin');
-    return { success: true, data: newItem };
-  } catch (error: any) {
-    console.error('Error add barang:', error);
-    // Kalau error unik (P2002)
-    if (error?.code === 'P2002') {
-      return { success: false, error: 'No. ID Barang sudah terdaftar! Gunakan ID lain.' };
-    }
-    return { success: false, error: error?.message || 'Gagal nambah barang ke Supabase!' };
-  }
-}
-
-// 3. Catat Penggunaan Barang (Ngurangin Stok + Log Mutasi)
-// 5. Catat Penggunaan (Pakai) Barang + Keterangan
-export async function recordUsage(data: {
-  id: string;
-  jumlahPakai: number;
-  tanggal: string;
-  keterangan?: string; // <-- Ini obat dari error merah lu
-  userId?: string;
-}) {
-  try {
-    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
-    if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
-    if (barang.jumlahAkhir < data.jumlahPakai) return { success: false, error: 'Stok tidak cukup!' };
-
-    let user = await prisma.user.findFirst();
-    const activeUserId = data.userId || user?.id;
-
-    if (!activeUserId) {
-      return { success: false, error: 'User tidak terdaftar!' };
-    }
-
-    const newAkhir = barang.jumlahAkhir - Number(data.jumlahPakai);
-
-    await prisma.$transaction([
-      prisma.barang.update({
-        where: { id: data.id },
-        data: { jumlahAkhir: newAkhir },
-      }),
-      prisma.mutasi.create({
+    if (user) {
+      await prisma.mutasi.create({
         data: {
           barangId: barang.id,
-          userId: activeUserId,
-          tipe: 'KELUAR',
-          jumlah: Number(data.jumlahPakai),
-          tanggal: data.tanggal,
-          // Sekarang dia bakal nyatet keterangan, kalau kosong defaultnya "Dipakai"
-          keterangan: data.keterangan || 'Barang dipakai / diambil', 
+          userId: user.id,
+          tipe: 'MASUK',
+          jumlah: data.jumlahAwal,
+          tanggal: new Date().toLocaleDateString('id-ID'),
+          keterangan: 'Stok Awal / Input Barang Baru',
         },
-      }),
-    ]);
+      });
+    }
 
-    return { success: true };
-  } catch (error) {
-    console.error('Error record usage:', error);
-    return { success: false, error: 'Gagal mencatat penggunaan!' };
-  }
-}
-
-// 4. Hapus Barang dari Supabase
-export async function deleteBarang(id: string) {
-  try {
-    await prisma.barang.delete({ where: { id } });
     revalidatePath('/admin/inventory');
     revalidatePath('/admin');
     return { success: true };
   } catch (error) {
-    console.error('Error delete barang:', error);
-    return { success: false, error: 'Gagal menghapus barang!' };
+    console.error('Error add barang:', error);
+    return { success: false, error: 'Gagal menambahkan barang!' };
   }
 }
 
-// 5. Ambil Statistik Dashboard secara Real-time
-export async function getDashboardStats() {
-  try {
-    const totalItems = await prisma.barang.count();
-    
-    // Barang dianggap kritis kalau stok akhir <= 3
-    const criticalItems = await prisma.barang.findMany({
-      where: { jumlahAkhir: { lte: 3 } },
-      orderBy: { jumlahAkhir: 'asc' },
-    });
-    
-    const safeItemsCount = totalItems - criticalItems.length;
-
-    // Hitung per kategori
-    const categoryHP = await prisma.barang.count({ where: { kategori: 'Barang Habis Pakai' } });
-    const categorySP = await prisma.barang.count({ where: { kategori: 'Spare Part / Suku Cadang' } });
-    const categoryAK = await prisma.barang.count({ where: { kategori: 'Alat Kerja' } });
-
-    // Total pegawai aktif
-    const userCount = await prisma.user.count();
-
-    // 5 Mutasi terakhir
-    const recentActivities = await prisma.mutasi.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        barang: true,
-        user: true,
-      },
-    });
-
-    return {
-      success: true,
-      stats: {
-        totalItems,
-        safeItemsCount,
-        criticalCount: criticalItems.length,
-        criticalItems,
-        categories: {
-          hp: categoryHP,
-          sp: categorySP,
-          ak: categoryAK,
-        },
-        userCount,
-        recentActivities,
-      },
-    };
-  } catch (error) {
-    console.error('Error fetch dashboard stats:', error);
-    return { success: false, error: 'Gagal memuat data statistik dashboard!' };
-  }
-}
-
-// 6. Restock / Tambah Stok Barang Lama (Nambah Stok + Log Mutasi MASUK)
-export async function restockBarang(data: {
-  id: string; // ID unik database
-  jumlahTambah: number;
-  tanggal: string;
-  userId?: string;
-}) {
+// 3. Restock Barang (+ Stok) -> Tipe MASUK
+export async function restockBarang(data: { id: string; jumlahTambah: number; tanggal: string; userId?: string }) {
   try {
     const barang = await prisma.barang.findUnique({ where: { id: data.id } });
     if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
 
     let user = await prisma.user.findFirst();
     const activeUserId = data.userId || user?.id;
-
-    if (!activeUserId) {
-      return { success: false, error: 'User tidak terdaftar!' };
-    }
+    if (!activeUserId) return { success: false, error: 'User tidak ditemukan!' };
 
     const newAkhir = barang.jumlahAkhir + Number(data.jumlahTambah);
 
@@ -203,95 +91,214 @@ export async function restockBarang(data: {
           tipe: 'MASUK',
           jumlah: Number(data.jumlahTambah),
           tanggal: data.tanggal,
-          keterangan: 'Restock / Penambahan stok rutin',
+          keterangan: 'Restock / Penambahan Stok',
         },
       }),
     ]);
 
     revalidatePath('/admin/inventory');
     revalidatePath('/admin');
-    revalidatePath('/admin/laporan');
     return { success: true };
   } catch (error) {
     console.error('Error restock:', error);
-    return { success: false, error: 'Gagal mencatat penambahan stok!' };
+    return { success: false, error: 'Gagal merestock barang!' };
   }
 }
 
-// 7. Ambil Data Laporan Mutasi Full (Masuk & Keluar)
+// 4. Pakai Barang Habis Pakai / Spare Part -> Tipe KELUAR
+export async function recordUsage(data: {
+  id: string;
+  jumlahPakai: number;
+  tanggal: string;
+  keterangan?: string;
+  userId?: string;
+}) {
+  try {
+    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
+    if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
+    if (barang.jumlahAkhir < data.jumlahPakai) return { success: false, error: 'Stok tidak cukup!' };
+
+    let user = await prisma.user.findFirst();
+    const activeUserId = data.userId || user?.id;
+    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
+
+    const newAkhir = barang.jumlahAkhir - Number(data.jumlahPakai);
+
+    await prisma.$transaction([
+      prisma.barang.update({
+        where: { id: data.id },
+        data: { jumlahAkhir: newAkhir },
+      }),
+      prisma.mutasi.create({
+        data: {
+          barangId: barang.id,
+          userId: activeUserId,
+          tipe: 'KELUAR',
+          jumlah: Number(data.jumlahPakai),
+          tanggal: data.tanggal,
+          keterangan: data.keterangan || 'Barang dipakai / diambil',
+        },
+      }),
+    ]);
+
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    console.error('Error record usage:', error);
+    return { success: false, error: 'Gagal mencatat penggunaan!' };
+  }
+}
+
+// 5. Pinjam Alat Kerja -> Tipe KELUAR
+export async function pinjamAlat(data: {
+  id: string;
+  jumlah: number;
+  tanggal: string;
+  keterangan: string;
+  userId?: string;
+}) {
+  try {
+    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
+    if (!barang) return { success: false, error: 'Alat tidak ditemukan' };
+    if (barang.jumlahAkhir < data.jumlah) return { success: false, error: 'Stok alat tidak mencukupi untuk dipinjam!' };
+
+    let user = await prisma.user.findFirst();
+    const activeUserId = data.userId || user?.id;
+    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
+
+    const newAkhir = barang.jumlahAkhir - Number(data.jumlah);
+
+    await prisma.$transaction([
+      prisma.barang.update({
+        where: { id: data.id },
+        data: { jumlahAkhir: newAkhir },
+      }),
+      prisma.mutasi.create({
+        data: {
+          barangId: barang.id,
+          userId: activeUserId,
+          tipe: 'KELUAR',
+          jumlah: Number(data.jumlah),
+          tanggal: data.tanggal,
+          keterangan: `PINJAM: ${data.keterangan}`,
+        },
+      }),
+    ]);
+
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    console.error('Error pinjam alat:', error);
+    return { success: false, error: 'Gagal mencatat peminjaman alat!' };
+  }
+}
+
+// 6. Kembalikan Alat Kerja -> Tipe MASUK
+export async function kembalikanAlat(data: {
+  id: string;
+  jumlah: number;
+  tanggal: string;
+  keterangan: string;
+  userId?: string;
+}) {
+  try {
+    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
+    if (!barang) return { success: false, error: 'Alat tidak ditemukan' };
+
+    let user = await prisma.user.findFirst();
+    const activeUserId = data.userId || user?.id;
+    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
+
+    const newAkhir = barang.jumlahAkhir + Number(data.jumlah);
+
+    await prisma.$transaction([
+      prisma.barang.update({
+        where: { id: data.id },
+        data: { jumlahAkhir: newAkhir },
+      }),
+      prisma.mutasi.create({
+        data: {
+          barangId: barang.id,
+          userId: activeUserId,
+          tipe: 'MASUK',
+          jumlah: Number(data.jumlah),
+          tanggal: data.tanggal,
+          keterangan: `KEMBALI: ${data.keterangan}`,
+        },
+      }),
+    ]);
+
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    console.error('Error kembalikan alat:', error);
+    return { success: false, error: 'Gagal mencatat pengembalian alat!' };
+  }
+}
+
+// 7. Hapus Barang (Aman dari Foreign Key Constraint Mutasi)
+export async function deleteBarang(id: string) {
+  try {
+    // Hapus relasi mutasinya dulu biar database nggak ngamuk
+    await prisma.mutasi.deleteMany({ where: { barangId: id } });
+    await prisma.barang.delete({ where: { id } });
+
+    revalidatePath('/admin/inventory');
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    console.error('Error delete barang:', error);
+    return { success: false, error: 'Gagal menghapus barang!' };
+  }
+}
+
+// 8. Ambil Laporan Mutasi (Untuk Halaman Laporan & Export PDF)
 export async function getLaporanMutasi() {
   try {
-    const mutasi = await prisma.mutasi.findMany({
-      orderBy: { createdAt: 'desc' },
+    const data = await prisma.mutasi.findMany({
       include: {
         barang: true,
         user: true,
       },
+      orderBy: { createdAt: 'desc' },
     });
-    return { success: true, data: mutasi };
+    return { success: true, data };
   } catch (error) {
-    console.error('Error fetch laporan:', error);
-    return { success: false, error: 'Gagal menarik data laporan!' };
+    console.error('Error get laporan mutasi:', error);
+    return { success: false, error: 'Gagal memuat laporan mutasi' };
   }
 }
 
-// 8. Fitur PINJAM Alat Kerja
-export async function pinjamAlat(data: { id: string; jumlah: number; tanggal: string; keterangan: string; userId?: string }) {
+// 9. Statistik Dashboard Utama
+export async function getDashboardStats() {
   try {
-    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
-    if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
-    if (barang.jumlahAkhir < data.jumlah) return { success: false, error: 'Stok alat tidak cukup untuk dipinjam!' };
+    const allItems = await prisma.barang.findMany();
+    const userCount = await prisma.user.count();
 
-    let user = await prisma.user.findFirst();
-    const activeUserId = data.userId || user?.id;
+    let categories = { ak: 0, hp: 0, sp: 0 };
+    let criticalCount = 0;
 
-    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
+    allItems.forEach((item) => {
+      if (item.kategori === 'Alat Kerja') categories.ak += 1;
+      if (item.kategori === 'Barang Habis Pakai') categories.hp += 1;
+      if (item.kategori === 'Spare Part / Suku Cadang') categories.sp += 1;
+      if (item.jumlahAkhir <= 3) criticalCount += 1;
+    });
 
-    const newAkhir = barang.jumlahAkhir - Number(data.jumlah); // Stok berkurang sementara
-
-    await prisma.$transaction([
-      prisma.barang.update({ where: { id: data.id }, data: { jumlahAkhir: newAkhir } }),
-      prisma.mutasi.create({
-        data: {
-          barangId: barang.id, userId: activeUserId, tipe: 'PINJAM', // Tipe khusus pinjam
-          jumlah: Number(data.jumlah), tanggal: data.tanggal, keterangan: data.keterangan,
-        },
-      }),
-    ]);
-
-    revalidatePath('/admin/inventory'); revalidatePath('/admin'); revalidatePath('/admin/laporan');
-    return { success: true };
+    return {
+      success: true,
+      stats: {
+        totalItems: allItems.length,
+        userCount,
+        categories,
+        criticalCount,
+      },
+    };
   } catch (error) {
-    return { success: false, error: 'Gagal mencatat peminjaman!' };
-  }
-}
-
-// 9. Fitur KEMBALIKAN Alat Kerja
-export async function kembalikanAlat(data: { id: string; jumlah: number; tanggal: string; keterangan: string; userId?: string }) {
-  try {
-    const barang = await prisma.barang.findUnique({ where: { id: data.id } });
-    if (!barang) return { success: false, error: 'Barang tidak ditemukan' };
-
-    let user = await prisma.user.findFirst();
-    const activeUserId = data.userId || user?.id;
-
-    if (!activeUserId) return { success: false, error: 'User tidak terdaftar!' };
-
-    const newAkhir = barang.jumlahAkhir + Number(data.jumlah); // Stok balik lagi
-
-    await prisma.$transaction([
-      prisma.barang.update({ where: { id: data.id }, data: { jumlahAkhir: newAkhir } }),
-      prisma.mutasi.create({
-        data: {
-          barangId: barang.id, userId: activeUserId, tipe: 'KEMBALI', // Tipe khusus kembali
-          jumlah: Number(data.jumlah), tanggal: data.tanggal, keterangan: data.keterangan,
-        },
-      }),
-    ]);
-
-    revalidatePath('/admin/inventory'); revalidatePath('/admin'); revalidatePath('/admin/laporan');
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: 'Gagal mencatat pengembalian!' };
+    console.error('Error dashboard stats:', error);
+    return { success: false, error: 'Gagal mengambil statistik' };
   }
 }

@@ -82,7 +82,7 @@ export default function LaporanPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-extrabold text-[#2D2A70] tracking-tight">Laporan Mutasi</h1>
-          <p className="text-slate-500 mt-1 font-medium">Riwayat barang masuk (Restock) dan keluar (Dipakai) dari Supabase.</p>
+          <p className="text-slate-500 mt-1 font-medium">Riwayat barang masuk (Restock) dan keluar (Dipakai) dari Gudang.</p>
         </div>
         <button 
           onClick={handleDownloadPDF}
